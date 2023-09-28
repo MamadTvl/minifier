@@ -26,6 +26,12 @@ export class TaskService {
         return this.taskModel.findByIdAndUpdate(id, { $set: { status } });
     }
 
+    async updateTaskDetails(id: string, details: Record<string, any>) {
+        return this.taskModel.findByIdAndUpdate(id, {
+            $set: { details: details },
+        });
+    }
+
     async removeTaskFromQueue(taskIds: string[]) {
         return this.queue.removeJobs(taskIds.join('|'));
     }
@@ -80,7 +86,7 @@ export class TaskService {
             prvTask.status === TaskStatus.IN_PROGRESS
         ) {
             throw new BadRequestException(
-                'please wait until previous task completed',
+                'please wait until the previous task completes',
             );
         }
         await this.userService.removeFile(userId, prvTaskId);

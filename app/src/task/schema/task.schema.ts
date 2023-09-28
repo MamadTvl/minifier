@@ -40,7 +40,6 @@ export class Task {
 
     @Prop({
         type: raw({
-            originalSize: { type: Number },
             minifiedSize: { type: Number },
             duration: { type: Number },
             memoryUsed: { type: Number },
