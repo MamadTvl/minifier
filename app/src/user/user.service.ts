@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { User, UserType } from './schema/user.schema';
 import { Model } from 'mongoose';
+import { TaskType } from 'src/task/schema/task.schema';
 
 @Injectable()
 export class UserService {
@@ -26,5 +27,33 @@ export class UserService {
             password: hashedPassword,
         });
         return newUser.save();
+    }
+
+    async findFiles(userId: string) {
+        return this.userModel.findById(
+            userId,
+            { password: false },
+            { populate: { path: 'files' } },
+        );
+    }
+
+    async addFile(userId: string, taskId: string) {
+        return this.userModel.findByIdAndUpdate(userId, {
+            $push: { files: taskId },
+        });
+    }
+
+    async removeFile(userId: string, taskId: string) {
+        return this.userModel.findByIdAndUpdate(userId, {
+            $pull: { files: taskId },
+        });
+    }
+
+    async findUserTaskId(
+        userId: string,
+        type: TaskType,
+    ): Promise<string | null> {
+        const { files } = await this.findFiles(userId);
+        return files.find((file) => file.type === type)?._id.toString() || null;
     }
 }
