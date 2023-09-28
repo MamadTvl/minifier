@@ -17,6 +17,31 @@ export enum TaskStatus {
     DONE = 'DONE',
     FAILED = 'FAILED',
 }
+@Schema({ _id: false })
+export class TaskDetails {
+    @Prop({ default: null })
+    minifiedSize: number;
+    @Prop({ default: null })
+    duration: number;
+    @Prop({
+        type: raw({
+            average: { type: Number },
+            min: { type: Number },
+            max: { type: Number },
+        }),
+        _id: false,
+        default: null,
+    })
+    memoryStat: {
+        average: number;
+        min: number;
+        max: number;
+    } | null;
+    @Prop({ default: null })
+    failedReason: string | null;
+}
+
+export const TaskDetailsSchema = SchemaFactory.createForClass(TaskDetails);
 
 @Schema({ timestamps: true })
 export class Task {
@@ -29,6 +54,9 @@ export class Task {
     @Prop()
     originalFilename: string;
 
+    @Prop({ default: false })
+    minifiedFilename: string;
+
     @Prop()
     size: number;
 
@@ -39,15 +67,10 @@ export class Task {
     destinationPath: string;
 
     @Prop({
-        type: raw({
-            minifiedSize: { type: Number },
-            duration: { type: Number },
-            memoryUsed: { type: Number },
-            failedReason: { type: String },
-        }),
+        type: TaskDetailsSchema,
         default: null,
     })
-    details: Record<string, string> | null;
+    details: TaskDetails;
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
     owner: UserDocument;
