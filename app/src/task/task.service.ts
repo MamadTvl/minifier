@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Task, TaskStatus, TaskType } from './schema/task.schema';
-import { Model } from 'mongoose';
+import { Task, TaskDetails, TaskStatus, TaskType } from './schema/task.schema';
+import { Model, Types } from 'mongoose';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { MinifyJob } from './task.processor';
@@ -26,7 +26,7 @@ export class TaskService {
         return this.taskModel.findByIdAndUpdate(id, { $set: { status } });
     }
 
-    async updateTaskDetails(id: string, details: Record<string, any>) {
+    async updateTaskDetails(id: string, details: Partial<TaskDetails>) {
         return this.taskModel.findByIdAndUpdate(id, {
             $set: { details: details },
         });
@@ -55,6 +55,21 @@ export class TaskService {
             owner: userId,
             status: TaskStatus.IN_QUEUE,
         });
+    }
+
+    async findUserFileLatestVersion(
+        userId: string | Types.ObjectId,
+        type: TaskType,
+    ) {
+        return await this.taskModel.findOne(
+            {
+                owner: userId,
+                type,
+                status: TaskStatus.DONE,
+            },
+            {},
+            { sort: { updatedAt: -1 } },
+        );
     }
 
     private async storeFile(
@@ -93,13 +108,30 @@ export class TaskService {
         return false;
     }
 
+    private getMinifiedFilename(
+        name: string,
+        extension: string,
+        type: TaskType,
+    ) {
+        if (type === TaskType.IMAGE) {
+            return name.replace(extension, 'webp');
+        }
+        return name.replace(extension, 'min.' + extension);
+    }
+
     async create(
         user: Express.User,
         file: Express.Multer.File,
         minify: boolean,
     ) {
-        const taskType = getTaskType(file.originalname.split('.').pop());
+        const extension = file.originalname.split('.').pop();
+        const taskType = getTaskType(extension);
         const isNew = await this.preprocess(taskType, user._id.toString());
+        const minifiedFilename = this.getMinifiedFilename(
+            file.originalname,
+            extension,
+            taskType,
+        );
         const destinationPath = await this.storeFile(
             file,
             user.username,
@@ -109,6 +141,7 @@ export class TaskService {
         const newTask = new this.taskModel({
             owner: user._id,
             originalFilename: file.originalname,
+            minifiedFilename,
             size: file.size,
             destinationPath,
             minified: minify,

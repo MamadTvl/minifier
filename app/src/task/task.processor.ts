@@ -4,30 +4,59 @@ import { spawn } from 'child_process';
 import { Job } from 'bull';
 import { stat, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { memoryUsageCalculator } from 'src/utils';
-import { TaskStatus } from './schema/task.schema';
+import { ps } from 'src/utils';
+import { TaskStatus, TaskType } from './schema/task.schema';
+import * as pidusage from 'pidusage';
+import { UserService } from 'src/user/user.service';
 
 export type MinifyJob = {
     taskId: string;
 };
 
 type MinifierResult = {
-    minifiedCode: string;
-    memoryUsed: number;
+    minifiedSize: number;
+    memoryStat: {
+        average: number;
+        min: number;
+        max: number;
+    };
     duration: number;
 };
 
 @Processor('minify')
 export class MinifyConsumer {
-    constructor(private readonly taskService: TaskService) {}
+    constructor(
+        private readonly taskService: TaskService,
+        private userService: UserService,
+    ) {}
 
-    private async minifier(cwd: string, filename: string) {
+    private getMemoryStat(stats: pidusage.Status[]) {
+        const min = Math.min(...stats.map((s) => s.memory));
+        const max = Math.max(...stats.map((s) => s.memory));
+        const average =
+            stats.reduce((prvValue, item) => prvValue + item.memory, 0) /
+            stats.length;
+        return { average, min, max };
+    }
+
+    private async saveFile(path: string, filename: string, content: string) {
+        const filePath = join(path, filename);
+        await writeFile(filePath, content);
+        const { size } = await stat(filePath);
+        return size;
+    }
+
+    private async fileCompressor(
+        cwd: string,
+        filename: string,
+        minifiedFilename: string,
+    ) {
         return new Promise<MinifierResult>((resolve, reject) => {
             let minifiedCode = '';
             let error = '';
             const startTime = new Date();
-            const child = spawn('minify', [filename], { cwd });
-            const [ref, stats] = memoryUsageCalculator(child.pid);
+            const child = spawn('uglifyjs', [filename], { cwd });
+            const [intervalRef, stats] = ps(child.pid);
 
             child.stdout.on('data', (data) => {
                 minifiedCode += data.toString();
@@ -37,49 +66,133 @@ export class MinifyConsumer {
                 error += data.toString();
             });
 
-            child.on('exit', (code) => {
+            child.on('exit', async (code) => {
                 const endTime = new Date();
-                clearInterval(ref);
+                clearInterval(intervalRef);
                 if (error.length > 0) {
                     reject(error);
                     return;
                 }
-                if (code === 0) {
-                    const memoryUsed = stats.at(-1).memory - stats.at(0).memory;
-                    const duration = endTime.getTime() - startTime.getTime();
-                    resolve({ minifiedCode, duration, memoryUsed });
-                } else {
+
+                if (code !== 0) {
                     reject(error);
+                    return;
                 }
+
+                const duration = endTime.getTime() - startTime.getTime();
+                const minifiedSize = await this.saveFile(
+                    cwd,
+                    minifiedFilename,
+                    minifiedCode,
+                );
+                const memoryStat = this.getMemoryStat(stats);
+                resolve({
+                    minifiedSize,
+                    duration,
+                    memoryStat,
+                });
             });
         });
+    }
+
+    private async imageCompressor(
+        cwd: string,
+        filename: string,
+        minifiedFilename: string,
+    ) {
+        return new Promise<MinifierResult>((resolve, reject) => {
+            let error = '';
+            const startTime = new Date();
+            const child = spawn('sharp', ['-i', filename, minifiedFilename], {
+                cwd,
+            });
+            const [intervalRef, stats] = ps(child.pid);
+
+            child.stderr.on('data', (data) => {
+                error += data.toString();
+            });
+
+            child.on('exit', async (code) => {
+                const endTime = new Date();
+                clearInterval(intervalRef);
+                if (error.length > 0) {
+                    reject(error);
+                    return;
+                }
+
+                if (code !== 0) {
+                    reject(error);
+                    return;
+                }
+
+                const duration = endTime.getTime() - startTime.getTime();
+                const memoryStat = this.getMemoryStat(stats);
+                const filePath = join(cwd, minifiedFilename);
+                const { size: minifiedSize } = await stat(filePath);
+                resolve({
+                    minifiedSize,
+                    duration,
+                    memoryStat,
+                });
+            });
+        });
+    }
+
+    private async minifier(
+        cwd: string,
+        filename: string,
+        minifiedFilename: string,
+        type: TaskType,
+    ) {
+        if (type === TaskType.IMAGE) {
+            return this.imageCompressor(cwd, filename, minifiedFilename);
+        }
+        return this.fileCompressor(cwd, filename, minifiedFilename);
     }
 
     @Process({ concurrency: 100 })
     async minify(job: Job<MinifyJob>) {
         const { taskId } = job.data;
-        const { destinationPath, originalFilename } =
-            await this.taskService.findOne(taskId);
+        const {
+            destinationPath,
+            originalFilename,
+            minifiedFilename,
+            owner,
+            type,
+        } = await this.taskService.findOne(taskId);
         try {
-            const result = await this.minifier(
+            const { duration, minifiedSize, memoryStat } = await this.minifier(
                 destinationPath,
                 originalFilename,
+                minifiedFilename,
+                type,
             );
-            const filePath = join(destinationPath, originalFilename);
-            await writeFile(filePath, result.minifiedCode);
-            const { size: fileSize } = await stat(filePath);
-            await this.taskService.updateTaskDetails(taskId, {
-                minifiedSize: fileSize,
-                duration: result.duration,
-                memoryUsed: result.memoryUsed,
-            });
-
-            await this.taskService.updateTaskStatus(taskId, TaskStatus.DONE);
+            Promise.all([
+                this.taskService.updateTaskDetails(taskId, {
+                    minifiedSize,
+                    duration,
+                    memoryStat,
+                }),
+                this.taskService.updateTaskStatus(taskId, TaskStatus.DONE),
+            ]);
         } catch (err) {
-            await this.taskService.updateTaskDetails(taskId, {
-                failedReason: err,
-            });
-            await this.taskService.updateTaskStatus(taskId, TaskStatus.FAILED);
+            Promise.all([
+                this.taskService.updateTaskDetails(taskId, {
+                    failedReason: err,
+                }),
+                this.taskService.updateTaskStatus(taskId, TaskStatus.FAILED),
+                this.userService.removeFile(owner._id.toString(), taskId),
+                this.taskService
+                    .findUserFileLatestVersion(owner._id, type)
+                    .then(
+                        (task) =>
+                            task &&
+                            this.userService.addFile(
+                                owner._id.toString(),
+                                task._id.toString(),
+                            ),
+                    ),
+            ]);
         }
     }
 }

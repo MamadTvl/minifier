@@ -43,7 +43,16 @@ export class UserService {
         });
     }
 
+    async removeOrphanFiles(userId: string) {
+        const { files } = await this.findFiles(userId);
+        const fileIds = files.map((file) => file._id.toString());
+        return this.userModel.findByIdAndUpdate(userId, {
+            $pull: { files: { $nin: fileIds } },
+        });
+    }
+
     async removeFile(userId: string, taskId: string) {
+        this.removeOrphanFiles(userId);
         return this.userModel.findByIdAndUpdate(userId, {
             $pull: { files: taskId },
         });
