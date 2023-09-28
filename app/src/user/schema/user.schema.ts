@@ -5,6 +5,8 @@ import { Task } from 'src/task/schema/task.schema';
 
 export type UserDocument = HydratedDocument<User>;
 
+export type UserType = User & { _id: mongoose.Types.ObjectId };
+
 @Schema({ timestamps: true })
 export class User {
     @Prop({ unique: true, required: true })
@@ -14,7 +16,7 @@ export class User {
     password: string;
 
     @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }] })
-    files: Task[];
+    files?: Task[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
