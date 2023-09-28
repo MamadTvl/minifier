@@ -11,15 +11,19 @@ export const getTaskType = (extension: string): TaskType => {
     }
 };
 
-export const memoryUsageCalculator = (
-    pid: number,
-): [NodeJS.Timer, pidusage.Status[]] => {
+export const ps = (pid: number): [NodeJS.Timer, pidusage.Status[]] => {
     const stats = [];
     pidusage(pid)
         .then((stat) => stats.push(stat))
-        .catch();
+        .catch(() => {
+            return;
+        });
     const ref = setInterval(() => {
-        pidusage(pid).then((stat) => stats.push(stat));
+        pidusage(pid)
+            .then((stat) => stats.push(stat))
+            .catch(() => {
+                return;
+            });
     }, 20);
     return [ref, stats];
 };
