@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
-import { User } from 'src/user/schema/user.schema';
+import { User, UserDocument } from 'src/user/schema/user.schema';
 import * as mongoose from 'mongoose';
 
 export type TaskDocument = HydratedDocument<Task>;
@@ -38,20 +38,20 @@ export class Task {
     @Prop()
     destinationPath: string;
 
-    @Prop(
-        raw({
+    @Prop({
+        type: raw({
             originalSize: { type: Number },
             minifiedSize: { type: Number },
-            fileName: { type: String },
             duration: { type: Number },
             memoryUsed: { type: Number },
             failedReason: { type: String },
         }),
-    )
-    details: Record<string, string>;
+        default: null,
+    })
+    details: Record<string, string> | null;
 
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-    owner: User;
+    owner: UserDocument;
 }
 
 export const TaskSchema = SchemaFactory.createForClass(Task);
