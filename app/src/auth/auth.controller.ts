@@ -4,28 +4,51 @@ import { JwtAuthGuard } from './guard/auth-jwt.guard';
 import { LocalAuthGuard } from './guard/auth-local.guard';
 import { Request } from 'express';
 import { AuthDto } from './dto/auth.dto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) {}
 
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                username: {
+                    type: 'string',
+                    nullable: false,
+                },
+                password: {
+                    type: 'string',
+                    nullable: false,
+                },
+            },
+        },
+    })
     @UseGuards(LocalAuthGuard)
     @Post('login')
     async login(@Req() req: Request) {
         return this.authService.login(req.user);
     }
-
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                username: {
+                    type: 'string',
+                    nullable: false,
+                },
+                password: {
+                    type: 'string',
+                    nullable: false,
+                },
+            },
+        },
+    })
     @Post('signup')
     async signup(@Body() authDto: AuthDto) {
         const { username, password } = authDto;
         return this.authService.signup(username, password);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('profile')
-    getProfile(@Req() req: Request) {
-        return req.user;
     }
 }
