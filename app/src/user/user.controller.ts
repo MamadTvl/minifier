@@ -12,8 +12,12 @@ export class UserController {
 
     @UseGuards(JwtAuthGuard)
     @Get('files')
-    getUserFile(@Req() req: Request) {
+    async getUserFile(@Req() req: Request) {
         const user = req.user;
-        return this.userService.findFiles(user._id.toString());
+        const { files } = await this.userService.findFiles(user._id.toString());
+        return {
+            message: 'files found',
+            files,
+        };
     }
 }
