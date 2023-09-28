@@ -103,9 +103,13 @@ export class MinifyConsumer {
         return new Promise<MinifierResult>((resolve, reject) => {
             let error = '';
             const startTime = new Date();
-            const child = spawn('sharp', ['-i', filename, minifiedFilename], {
-                cwd,
-            });
+            const child = spawn(
+                'sharp',
+                ['-i', filename, '-o', minifiedFilename],
+                {
+                    cwd,
+                },
+            );
             const [intervalRef, stats] = ps(child.pid);
 
             child.stderr.on('data', (data) => {
