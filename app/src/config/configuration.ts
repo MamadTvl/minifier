@@ -11,7 +11,7 @@ export default () => ({
         host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT, 10) || 6379,
         password: process.env.REDIS_PASSWORD,
-        database: process.env.REDIS_DATABASE,
+        database: parseInt(process.env.REDIS_DATABASE, 10) || 1,
     },
     secret: process.env.SECRET,
     adminUser: process.env.ADMIN_USER,
@@ -31,7 +31,7 @@ export interface Config {
         host: string;
         port: number;
         password: string;
-        database: string;
+        database: number;
     };
     secret: string;
     adminUser: string;

@@ -39,6 +39,7 @@
     "passport": "^0.6.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "pidusage": "^3.0.2",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.2.0"
@@ -54,6 +55,7 @@
     "@types/node": "^16.0.0",
     "@types/passport-jwt": "^3.0.10",
     "@types/passport-local": "^1.0.36",
+    "@types/pidusage": "^2.0.3",
     "@types/supertest": "^2.0.11",
     "@typescript-eslint/eslint-plugin": "^5.0.0",
     "@typescript-eslint/parser": "^5.0.0",

@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration, { Config } from './config/configuration';
+import { BullModule } from '@nestjs/bull';
 
 @Module({
     imports: [
@@ -25,6 +26,21 @@ import configuration, { Config } from './config/configuration';
                         password: conf.password,
                     },
                     authSource: conf.authSource,
+                };
+            },
+            inject: [ConfigService],
+        }),
+        BullModule.forRootAsync({
+            useFactory: async (configService: ConfigService<Config>) => {
+                const conf = configService.get<Config['redis']>('redis');
+                return {
+                    prefix: 'PARSPACK',
+                    redis: {
+                        host: conf.host,
+                        password: conf.password,
+                        port: conf.port,
+                        db: conf.database,
+                    },
                 };
             },
             inject: [ConfigService],
