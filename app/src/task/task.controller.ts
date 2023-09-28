@@ -5,6 +5,7 @@ import {
     FileValidator,
     MaxFileSizeValidator,
     ParseFilePipe,
+    Post,
     Put,
     Req,
     UploadedFile,
@@ -26,7 +27,7 @@ export class TaskController {
 
     @UseGuards(JwtAuthGuard)
     @UseInterceptors(FileInterceptor('file'))
-    @Put()
+    @Post('minify')
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
@@ -44,13 +45,13 @@ export class TaskController {
             },
         },
     })
-    async putTask(
+    async postMinifyTask(
         @Body() body: TaskDto,
         @UploadedFile(
             new ParseFilePipe({
                 validators: [
                     new FileTypeValidator({
-                        fileType: /(text\/(javascript|css)|image\/*)$/,
+                        fileType: /(text\/(javascript|css)|image\/.*)$/,
                     }),
                     new MaxFileSizeValidator({ maxSize: Infinity }),
                 ],
