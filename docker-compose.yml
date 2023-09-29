@@ -45,7 +45,26 @@ services:
       timeout: 10s
       retries: 3
     restart: always
+  
+  web-server:
+    image: openresty
+    build: 
+      context: ./web-server
+      dockerfile: Dockerfile
+    container_name: openresty
+    restart: always
+    ports:
+      - "8087:80"
+    volumes:
+      - ./web-server/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
+      - ./web-server/scripts:/usr/local/openresty/nginx/scripts
+      - openresty-logs:/usr/local/openresty/nginx/logs
+    command: openresty -g 'daemon off;'
+    networks:
+      - net
 
+volumes:
+  openresty-logs:
 networks:
   net:
 
