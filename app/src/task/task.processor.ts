@@ -157,6 +157,7 @@ export class MinifyConsumer {
     @Process({ concurrency: 100 })
     async minify(job: Job<MinifyJob>) {
         const { taskId } = job.data;
+        await this.taskService.updateTaskStatus(taskId, TaskStatus.IN_PROGRESS);
         const {
             destinationPath,
             originalFilename,
