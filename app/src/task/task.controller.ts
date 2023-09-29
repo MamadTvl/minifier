@@ -2,11 +2,9 @@ import {
     Body,
     Controller,
     FileTypeValidator,
-    FileValidator,
     MaxFileSizeValidator,
     ParseFilePipe,
     Post,
-    Put,
     Req,
     UploadedFile,
     UseGuards,
@@ -61,6 +59,15 @@ export class TaskController {
         @Req() req: Request,
     ) {
         const user = req.user;
-        return this.taskService.create(user, file, body.minify);
+        const { queue, task } = await this.taskService.create(
+            user,
+            file,
+            body.minify,
+        );
+
+        return {
+            message: queue ? 'Task Queued' : 'File Saved',
+            task,
+        };
     }
 }
