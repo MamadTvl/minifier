@@ -5,11 +5,10 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { AuthController } from './auth.controller';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import { Config } from 'src/config/configuration';
 import { LocalStrategy } from './strategy/local.strategy';
-// signOptions: { expiresIn: '86400s' },
-//             secret: 'our-secret',
+
 @Module({
     imports: [
         UserModule,

@@ -1,15 +1,34 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    Injectable,
+    OnApplicationBootstrap,
+} from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
 import * as bcrypt from 'bcryptjs';
-import { UserType } from 'src/user/schema/user.schema';
 import { JwtPayload } from './strategy/jwt.strategy';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Config } from 'src/config/configuration';
 @Injectable()
-export class AuthService {
+export class AuthService implements OnApplicationBootstrap {
     constructor(
         private userService: UserService,
         private jwtService: JwtService,
+        private configService: ConfigService<Config>,
     ) {}
+
+    async onApplicationBootstrap() {
+        const username = this.configService.get('adminUser');
+        const password = this.configService.get('adminPassword');
+        if (!username || !password) {
+            return;
+        }
+        this.signup(username, password)
+            .then()
+            .catch(() => {
+                return;
+            });
+    }
 
     async validateUser(username: string, password: string) {
         const user = await this.userService.findOne(username);
