@@ -50,12 +50,14 @@ export class MinifyConsumer {
         cwd: string,
         filename: string,
         minifiedFilename: string,
+        type: TaskType,
     ) {
+        const command = type === TaskType.CSS ? 'minify' : 'uglifyjs';
         return new Promise<MinifierResult>((resolve, reject) => {
             let minifiedCode = '';
             let error = '';
             const startTime = new Date();
-            const child = spawn('uglifyjs', [filename], { cwd });
+            const child = spawn(command, [filename], { cwd });
             const [intervalRef, stats] = ps(child.pid);
 
             child.stdout.on('data', (data) => {
@@ -151,7 +153,7 @@ export class MinifyConsumer {
         if (type === TaskType.IMAGE) {
             return this.imageCompressor(cwd, filename, minifiedFilename);
         }
-        return this.fileCompressor(cwd, filename, minifiedFilename);
+        return this.fileCompressor(cwd, filename, minifiedFilename, type);
     }
 
     @Process({ concurrency: 100 })

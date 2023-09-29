@@ -42,7 +42,7 @@ USER backend
 ###################
 
 FROM node:18-alpine As production
-RUN npm install -g uglify-js sharp-cli
+RUN npm install -g uglify-js sharp-cli minify
 
 WORKDIR /app
 
