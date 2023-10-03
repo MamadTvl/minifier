@@ -22,6 +22,14 @@ export class TaskService {
         return this.taskModel.findById(id);
     }
 
+    async findOneUserTask(userId: string | Types.ObjectId, taskId: string) {
+        return this.taskModel.findOne({ owner: userId, _id: taskId });
+    }
+
+    async findUserTasks(userId: string | Types.ObjectId) {
+        return this.taskModel.find({ owner: userId });
+    }
+
     async updateTaskStatus(id: string, status: TaskStatus) {
         return this.taskModel.findByIdAndUpdate(id, { $set: { status } });
     }

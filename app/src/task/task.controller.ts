@@ -2,7 +2,10 @@ import {
     Body,
     Controller,
     FileTypeValidator,
+    Get,
     MaxFileSizeValidator,
+    NotFoundException,
+    Param,
     ParseFilePipe,
     Post,
     Req,
@@ -67,6 +70,31 @@ export class TaskController {
 
         return {
             message: queue ? 'Task Queued' : 'File Saved',
+            task,
+        };
+    }
+
+    @Get()
+    @UseGuards(JwtAuthGuard)
+    async getTasks(@Req() req: Request) {
+        const user = req.user;
+        const tasks = await this.taskService.findUserTasks(user._id);
+        return {
+            message: 'tasks found',
+            tasks,
+        };
+    }
+
+    @Get(':task_id')
+    @UseGuards(JwtAuthGuard)
+    async getOneTask(@Req() req: Request, @Param('task_id') taskId: string) {
+        const user = req.user;
+        const task = await this.taskService.findOneUserTask(user._id, taskId);
+        if (!task) {
+            throw new NotFoundException();
+        }
+        return {
+            message: 'task found',
             task,
         };
     }
