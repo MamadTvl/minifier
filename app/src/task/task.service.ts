@@ -121,10 +121,14 @@ export class TaskService {
         extension: string,
         type: TaskType,
     ) {
+        const newFilename = name.split('.');
+        newFilename.pop();
         if (type === TaskType.IMAGE) {
-            return name.replace(extension, 'webp');
+            newFilename.push('webp');
+        } else {
+            newFilename.push('min', extension);
         }
-        return name.replace(extension, 'min.' + extension);
+        return newFilename.join('.');
     }
 
     async create(
