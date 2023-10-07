@@ -3,12 +3,14 @@ import {
     Controller,
     FileTypeValidator,
     Get,
+    Header,
     MaxFileSizeValidator,
     NotFoundException,
     Param,
     ParseFilePipe,
     Post,
     Req,
+    Res,
     UploadedFile,
     UseGuards,
     UseInterceptors,
@@ -18,7 +20,7 @@ import { JwtAuthGuard } from 'src/auth/guard/auth-jwt.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TaskDto } from './dto/task.dto';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 @ApiTags('task')
 @ApiBearerAuth('user-auth')
@@ -97,5 +99,19 @@ export class TaskController {
             message: 'task found',
             task,
         };
+    }
+
+    @Get(':task_id/download')
+    @Header('content-type', 'application/octet-stream')
+    @Header('accept-ranges', 'bytes')
+    @UseGuards(JwtAuthGuard)
+    async download(
+        @Req() req: Request,
+        @Param('task_id') taskId: string,
+        @Res() res: Response,
+    ) {
+        const user = req.user;
+        const [buffer] = await this.taskService.getFile(taskId, user._id);
+        return res.end(buffer);
     }
 }
