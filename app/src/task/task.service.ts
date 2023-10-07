@@ -165,7 +165,7 @@ export class TaskService {
         const newTask = new this.taskModel({
             owner: user._id,
             originalFilename: file.originalname,
-            minifiedFilename,
+            minifiedFilename: minify ? minifiedFilename : null,
             size: file.size,
             destinationPath,
             minified: minify,
@@ -202,13 +202,13 @@ export class TaskService {
         if (task.status !== TaskStatus.DONE) {
             throw new NotFoundException();
         }
-        const filePath = path.join(
-            task.destinationPath,
-            task.minified ? task.minifiedFilename : task.originalFilename,
-        );
+        const filename = task.minified
+            ? task.minifiedFilename
+            : task.originalFilename;
+        const filePath = path.join(task.destinationPath, filename);
         try {
             const buffer = await readFile(filePath);
-            return [buffer, task.type];
+            return [buffer, filename];
         } catch {
             throw new NotFoundException();
         }

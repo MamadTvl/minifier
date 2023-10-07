@@ -111,7 +111,11 @@ export class TaskController {
         @Res() res: Response,
     ) {
         const user = req.user;
-        const [buffer] = await this.taskService.getFile(taskId, user._id);
+        const [buffer, filename] = await this.taskService.getFile(
+            taskId,
+            user._id,
+        );
+        res.set('Content-Disposition', `attachment; filename="${filename}"`);
         return res.end(buffer);
     }
 }
