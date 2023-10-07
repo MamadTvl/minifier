@@ -54,8 +54,8 @@ export class Task {
     @Prop()
     originalFilename: string;
 
-    @Prop({ default: false })
-    minifiedFilename: string;
+    @Prop({ default: null })
+    minifiedFilename: string | null;
 
     @Prop()
     size: number;
