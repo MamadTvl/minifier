@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Task, TaskDetails, TaskStatus, TaskType } from './schema/task.schema';
 import { Model, Types } from 'mongoose';
@@ -6,8 +10,7 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { MinifyJob } from './task.processor';
 import { UserService } from 'src/user/user.service';
-import { getTaskType } from 'src/utils';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
 
 @Injectable()
@@ -131,13 +134,22 @@ export class TaskService {
         return newFilename.join('.');
     }
 
+    private getTaskType(mimetype: string) {
+        if (mimetype === 'text/css') {
+            return TaskType.CSS;
+        } else if (mimetype === 'text/javascript') {
+            return TaskType.JS;
+        }
+        return TaskType.IMAGE;
+    }
+
     async create(
         user: Express.User,
         file: Express.Multer.File,
         minify: boolean,
     ) {
         const extension = file.originalname.split('.').pop();
-        const taskType = getTaskType(extension);
+        const taskType = this.getTaskType(file.mimetype);
         const isNew = await this.preprocess(taskType, user._id.toString());
         const minifiedFilename = this.getMinifiedFilename(
             file.originalname,
@@ -183,5 +195,22 @@ export class TaskService {
             isNew,
             task,
         };
+    }
+
+    async getFile(taskId: string, userId: string | Types.ObjectId) {
+        const task = await this.findOneUserTask(userId, taskId);
+        if (task.status !== TaskStatus.DONE) {
+            throw new NotFoundException();
+        }
+        const filePath = path.join(
+            task.destinationPath,
+            task.minified ? task.minifiedFilename : task.originalFilename,
+        );
+        try {
+            const buffer = await readFile(filePath);
+            return [buffer, task.type];
+        } catch {
+            throw new NotFoundException();
+        }
     }
 }
